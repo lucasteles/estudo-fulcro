@@ -119,3 +119,6 @@ dist
 
 .cpcache/
 .shadow-cljs/
+.idea/
+resources/public/js/main/cljs-runtime/
+
