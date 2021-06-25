@@ -2,28 +2,31 @@
   (:require
     [com.fulcrologic.fulcro.application :as app]
     [com.fulcrologic.fulcro.components :as comp :refer [defsc]]
-    [com.fulcrologic.fulcro.dom :as dom]))
+    [com.fulcrologic.fulcro.dom :as dom]
+    [com.fulcrologic.fulcro.algorithms.merge :as merge]))
 
 (defonce app (app/fulcro-app))
 
 (defsc Car [this {:car/keys [id model]}]
-  {}
+  {:query [:car/id :car/model]
+   :ident :car/id}
   (dom/li "Modelo: " model))
 (def ui-car (comp/factory Car {:key-fn :car/id}))
 
-(defsc Person [this {:person/keys [id name]}]
-  {:query [:person/id :person/name]
+(defsc Person [this {:person/keys [id name cars]}]
+  {:query [:person/id :person/name {:person/cars (comp/get-query Car)}]
    :ident :person/id}
   (dom/div
     (dom/div (str id " - " name))
-    #_#_ (dom/h4 "Carros:")
+    (dom/h4 "Carros:")
     (dom/ul (map ui-car cars))))
 
 (def ui-person (comp/factory Person {:key-fn :person/id}))
 
-(defsc Root [this {:keys [sample]}]
-  {}
-  (dom/div (ui-person sample)))
+(defsc Root [this {person :root/person}]
+  {:query [{:root/person (comp/get-query Person)}]}
+  (dom/div (ui-person person)))
+
 
 
 (defn ^:export init
@@ -48,13 +51,15 @@
   (keys shadow)
   (js/alert "hi")
 
-  (-> (::app/state-atom app) deref)
+  (app/current-state app)
+  (reset! (::app/state-atom app) {})
 
-  (reset! (::app/state-atom app)
-          {:sample #:person {:id 1
-                             :name "Lucas"
-                             :cars [#:car{:id 22 :model "Opala"}
-                                    #:car{:id 23 :model "Caravan"}]}})
-
+  (merge/merge-component!
+    app Person
+    #:person {:id   1
+              :name "Lucas"
+              :cars [#:car{:id 22 :model "Opala"}
+                     #:car{:id 23 :model "Caravan"}]}
+    :replace [:root/person])
   (app/schedule-render! app)
   )
